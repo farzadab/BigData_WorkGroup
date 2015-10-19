@@ -1,0 +1,107 @@
+swagger: '2.0'
+definitions:
+  Graph:
+    type: "object"
+    properties:
+      nodes:
+        type: array
+        items:
+          $ref: '#/definitions/Node'
+      edges:
+        type: array
+        items:
+          $ref: '#/definitions/Edge'
+  Node:
+    type: "object"
+    properties:
+      index:
+        type: integer
+        format: int64
+      title:
+        type: string
+      url:
+        type: string
+      source:
+        type: string
+      time:
+        type: integer
+        format: int64
+        description: timestamp of the news
+  Edge:
+    type: "object"
+    properties:
+      source:
+        type: integer
+        format: int64
+        description: Index of the source (old)
+      destination:
+        type: integer
+        format: int64
+        description: Index of the destination (new)
+      similarity:
+        type: number
+        format: double
+info:
+  version: 0.0.0
+  title: 'Use Case 1: News Graph'
+paths:
+  /news_graph:
+    post:
+      description: >
+        Gets `Graph` object.
+
+        Optional query param of **time range** , **news source** , **similarity
+        threshold** , **delay threshold**, **similarity targets** determines
+
+        returned graph
+      parameters:
+        - name: time_range
+          in: query
+          description: time range of news ((minimum,maximum)) ((timestamp))
+          required: true
+          type: array
+          items:
+            type: integer
+        - name: sources
+          in: query
+          description: Array of all news source((text)) (e.g. tabnak,...)
+          required: false
+          type: array
+          items:
+            type: string
+        - name: similarity_elements_weight
+          in: query
+          description: weight for computing weighted average of ((title, abstract, body)) range in (0,1)
+          required: false
+          type: array
+          items:
+            type: number
+            format: float
+        - name: similarity_threshold
+          in: query
+          description: min threshold of similarity , range in (0,1)
+          required: false
+          type: number
+          format: double
+        - name: delay_threshold
+          in: query
+          description: max threshold of similarity ((second))
+          required: false
+          type: integer
+          format: int64
+        - name: max_edges
+          in: query
+          description: maximum edges in response ((10000))
+          required: false
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: A complex object array response
+          schema:
+            $ref: '#/definitions/Graph'
+    get:
+      responses:
+        '500':
+          description: You can't
+          
