@@ -112,32 +112,24 @@ function addToMap(mp, item) {
         mp.set(item, mp.size);
 }
 
-function createMatrix(data, n) {
+function createMatrix(tokens, n) {
     var words = new Map();
-    for(var i=0; i<data.length; i++)
-        for(var j=0; j<data[i].tokens.length; j++)
-            addToMap(words, data[i].tokens[j]);
+    for(var j=0; j<tokens.length; j++)
+        addToMap(words, tokens[j]);
 
-    // console.log('\tnumber of words: ' + words.size);
-    // var matrix = createNDimArray([words.size, words.size]);
-    // console.log('\tcreated 2D matrix');
-    // for(var i=0; i<matrix.length; i++)
-    //     for(var j=0; j<matrix[i].length; j++)
-    //         matrix[i][j] = 0;
     var adj = [];
     for(var i=0; i<words.size; i++)
         adj[i] = [];
 
-    for(var i=0; i<data.length; i++)
-        for(var j=0; j<data[i].tokens.length-n+1; j++)
-            for(var k=1; k<n; k++) {
-                var u = words.get(data[i].tokens[j]);
-                var v = words.get(data[i].tokens[j+k]);
-                // matrix[u][v]++;
-                // matrix[v][u]++;
-                adj[u].push([v, 1]);
-                adj[v].push([u, 1]);
-            }
+    for(var j=0; j<tokens.length-n+1; j++)
+        for(var k=1; k<n; k++) {
+            var u = words.get(tokens[j]);
+            var v = words.get(tokens[j+k]);
+            // matrix[u][v]++;
+            // matrix[v][u]++;
+            adj[u].push([v, 1]);
+            adj[v].push([u, 1]);
+        }
     for(var i=0; i<adj.length; i++) {
         if( adj[i].length === 0 )
             continue;
@@ -154,8 +146,6 @@ function createMatrix(data, n) {
         }
         adj[i] = adj[i].slice(0, p+1).map(div2ndFunc(sum));
     }
-    // for(var i=0; i<matrix.length; i++)
-    //     adj[i] = adj[i].map(divFunc(adj[i].reduce(sumFunc)));
 
     var nodes = [];
     words.forEach(function(num, word){nodes[num] = word;});
@@ -222,13 +212,21 @@ khoshgel = khoshgelify(fn_small);
 
 tokenize(khoshgel);
 
-console.log('starting....');
-graph = createMatrix(khoshgel, 10);
-console.log('made matrix....');
-// console.log(graph);
-// console.log(graph.nodes);
+graph = createMatrix(khoshgel[0].tokens, 10);
 probs = randomWalk(graph.edges);
-// console.log(probs.slice(0, 10));
+
+probs.forEach(function(p, i) {
+    if( p > 0.0007 )
+        console.log(graph.nodes[i] + '  : ' + p);
+});
+
+// console.log('starting....');
+// graph = createMatrix(khoshgel, 10);
+// console.log('made matrix....');
+// // console.log(graph);
+// // console.log(graph.nodes);
+// probs = randomWalk(graph.edges);
+// // console.log(probs.slice(0, 10));
 
 
 // fs.writeFile('./data/keyword.json', JSON.stringify({
