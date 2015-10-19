@@ -56,6 +56,20 @@ function check_diff(v1, v2, eps) {
     }).reduce(function(a, b) { return a && b; } );
 }
 
+function createNDimArray(dimensions) {
+    if (dimensions.length > 0) {
+        var dim = dimensions[0];
+        var rest = dimensions.slice(1);
+        var newArray = new Array();
+        for (var i = 0; i < dim; i++) {
+            newArray[i] = createNDimArray(rest);
+        }
+        return newArray;
+    } else {
+         return undefined;
+    }
+}
+
 function randomWalk(matrix) {
     v_prime = [];
     for(var i=0; i<matrix.length; i++)
@@ -167,7 +181,8 @@ khoshgel = khoshgelify(fn_small);
 
 tokenize(khoshgel);
 
-graph = createMatrix(data, 10);
+graph = createMatrix(khoshgel, 10);
+graph.nodes;
 randomWalk(graph.edges);
 
 // similiarity(khoshgel, khoshgel);
