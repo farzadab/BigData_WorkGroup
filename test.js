@@ -1,8 +1,10 @@
-// var linearAlgebra = require('linear-algebra')(),     // initialise it
+    // var linearAlgebra = require('linear-algebra')(),     // initialise it
 // Vector = linearAlgebra.Vector,
 // Matrix = linearAlgebra.Matrix;
 // var Matrix = require('vektor').matrix;
 // var Vector = require('vektor').vector;
+
+var fs = require('fs');
 
 var bad_chars = {
     'ي': 'ی',
@@ -40,14 +42,25 @@ var divFunc = function(divisor){
     return function(item){ return item / divisor; };
 };
 
+var div2ndFunc = function(divisor){
+    return function(item){ return [item[0], item[1] / divisor]; };
+};
+
 var sumFunc = function(a, b) { return a+b; };
 
 function prod(vec, mat) {  // TODO: check this once more
-    return vec.map(function(item, i){
-        return vec.map(function(item, j){
-            return vec[j] * mat[j][i];
-        }).reduce(sumFunc);
+    var ret = vec.map(function(){ return 0; });
+    mat.forEach(function(adj, i){
+        adj.forEach(function(edge, j){
+            ret[edge[0]] += edge[1] * vec[i];
+        });
     });
+    return ret;
+    // return vec.map(function(item, i){
+    //     return vec.map(function(item, j){
+    //         return vec[j] * mat[j][i];
+    //     }).reduce(sumFunc);
+    // });
 }
 
 function check_diff(v1, v2, eps) {
@@ -75,13 +88,18 @@ function randomWalk(matrix) {
     for(var i=0; i<matrix.length; i++)
         v_prime[i] = 1/matrix.length;
 
+    var cnt = 0;
     while(true) {
         new_v = prod(v_prime, matrix);
 
-        if( check_diff(new_v, v_prime, 1e-6) )
+        if( check_diff(new_v, v_prime, 1e-4) )
             break;
 
         v_prime = new_v;
+
+        cnt++;
+        if( cnt % 10 === 0 )
+            console.log('\titeration number ' + cnt + ' done');
     }
     return v_prime;
 }
@@ -100,27 +118,50 @@ function createMatrix(data, n) {
         for(var j=0; j<data[i].tokens.length; j++)
             addToMap(words, data[i].tokens[j]);
 
-    var matrix = createNDimArray([words.size, words.size]);
-    for(var i=0; i<matrix.length; i++)
-        for(var j=0; j<matrix[i].length; j++)
-            matrix[i][j] = 0;
+    // console.log('\tnumber of words: ' + words.size);
+    // var matrix = createNDimArray([words.size, words.size]);
+    // console.log('\tcreated 2D matrix');
+    // for(var i=0; i<matrix.length; i++)
+    //     for(var j=0; j<matrix[i].length; j++)
+    //         matrix[i][j] = 0;
+    var adj = [];
+    for(var i=0; i<words.size; i++)
+        adj[i] = [];
 
     for(var i=0; i<data.length; i++)
         for(var j=0; j<data[i].tokens.length-n+1; j++)
             for(var k=1; k<n; k++) {
                 var u = words.get(data[i].tokens[j]);
                 var v = words.get(data[i].tokens[j+k]);
-                matrix[u][v]++;
-                matrix[v][u]++;
+                // matrix[u][v]++;
+                // matrix[v][u]++;
+                adj[u].push([v, 1]);
+                adj[v].push([u, 1]);
             }
-    for(var i=0; i<matrix.length; i++)
-        matrix[i] = matrix[i].map(divFunc(matrix[i].reduce(sumFunc)));
+    for(var i=0; i<adj.length; i++) {
+        if( adj[i].length === 0 )
+            continue;
+        adj[i].sort();
+        var p = 0, p2=0;
+        var sum = adj[i][0][1];
+        while(++p2 < adj[i].length) {
+            sum += adj[i][p2][1];
 
-    var nodes = new Array();
+            if( adj[i][p][0] === adj[i][p2][0] )
+                adj[i][p][1] += adj[i][p2][1];
+            else if( p2 != adj[i].length-1 )
+                p++;
+        }
+        adj[i] = adj[i].slice(0, p+1).map(div2ndFunc(sum));
+    }
+    // for(var i=0; i<matrix.length; i++)
+    //     adj[i] = adj[i].map(divFunc(adj[i].reduce(sumFunc)));
+
+    var nodes = [];
     words.forEach(function(num, word){nodes[num] = word;});
 
     return {
-        edges: matrix,
+        edges: adj,
         nodes: nodes,
     }
 }
@@ -181,8 +222,29 @@ khoshgel = khoshgelify(fn_small);
 
 tokenize(khoshgel);
 
+console.log('starting....');
 graph = createMatrix(khoshgel, 10);
-graph.nodes;
-randomWalk(graph.edges);
+console.log('made matrix....');
+// console.log(graph);
+// console.log(graph.nodes);
+probs = randomWalk(graph.edges);
+// console.log(probs.slice(0, 10));
+
+
+// fs.writeFile('./data/keyword.json', JSON.stringify({
+//     nodes: graph.nodes,
+//     probs: probs
+// }), function(err){
+//     if( err )
+//         return console.log(err);
+//     console.log('file was saved as data/keyword.json');
+// });
 
 // similiarity(khoshgel, khoshgel);
+
+/*
+    change algorithm to find keywords on just a single news
+
+    make keyword graph
+
+*/
