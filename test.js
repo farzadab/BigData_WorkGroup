@@ -98,8 +98,8 @@ function randomWalk(matrix) {
         v_prime = new_v;
 
         cnt++;
-        if( cnt % 10 === 0 )
-            console.log('\titeration number ' + cnt + ' done');
+        // if( cnt % 10 === 0 )
+        //     console.log('\titeration number ' + cnt + ' done');
     }
     return v_prime;
 }
@@ -166,14 +166,6 @@ function khoshgelify(data){
     return out;
 }
 
-function union_set(set1, set2){
-    var out = new Set(set1);
-    set2.forEach(function(item){
-        out.add(item);
-    });
-    return out;
-}
-
 function intersection_set(set1, set2){
     var out = new Set();
     set1.forEach(function(item){
@@ -206,22 +198,161 @@ function similiarity(data_a, data_b){
         }
 }
 
+function extractKeywords(data, n, size) {
+    var graph = createMatrix(data.tokens, n);
+    var probs = randomWalk(graph.edges);
+    var keywords = _.zip(probs, graph.nodes)
+                    .sort().reverse().slice(0,size)
+                    .map(function(item) {
+                        return {prob: item[0], word: item[1]};
+                    });
+    // console.log(keywords);
+    return keywords;
+}
+
+function unionSetMutable(set1, set2){
+    set2.forEach(function(item){
+        set1.add(item);
+    });
+}
+
+function union_set(set1, set2){
+    var out = new Set(set1);
+    unionSetMutable(out, set2);
+    return out;
+}
+
+function writeGraphToFile(nodes, edges) {
+    fs.writeFile('./data/keywordGraph.json', JSON.stringify({
+        nodes: nodes,
+        edges: edges
+    }), function(err){
+        if( err )
+            return console.log(err);
+        console.log('file saved in data/keywordGraph.json');
+    });
+}
+
+function keywordGraph(data) {
+    var getWord = function(item) { return item.word; };
+    var addCliqueEdges = function(clique, edges, nodes) {
+        for(var i=0; i<clique.length; i++)
+            for(var j=i+1; j<clique.length; j++) {
+                var u = nodes.get(clique[i]);
+                var v = nodes.get(clique[j]);
+                // adj[u].push(v);
+                // adj[v].push(u);
+                edges.push( u<v ? [u,v] : [v,u] );
+            }
+    };
+    var compressEdges = function() {
+        edges.sort(function(a, b) { return (a[0] != b[0] ? a[0] < b[0] : a[1] < b[1]); });
+        var p=0, p2=0;
+        while( p < edges.length ) {
+            edges[p2] = {source: edges[p2][0], target: edges[p2][1], value: 1};
+
+            while(  ++p < edges.length &&
+                    edges[p][0] == edges[p2].source &&
+                    edges[p][1] == edges[p2].target ) {
+                edges[p2].value ++;
+            }
+            p2++;
+        }
+        edges = edges.slice(0, p2);
+    };
+
+    var kwsPerNews = [];
+    var words = new Map();
+    var addToWords = _.partial(addToMap, words);
+    // var adj = [];
+    var edges = [];
+
+    for(var i=0; i<data.length; i++) {
+        var kws = extractKeywords(data[i], 10, 8);
+        var newsWords = kws.map(getWord);
+        kwsPerNews.push(kws);
+        newsWords.forEach(addToWords);
+        addCliqueEdges(newsWords, edges, words);
+    }
+    compressEdges();
+
+    console.log('number of keywords in total:', words.size);
+
+    var nodes = [];
+    words.forEach(function(num, word) { nodes[num] = word; });
+
+    return {
+        nodes: nodes,
+        edges: edges
+    };
+}
+
+function range(start, edge, step) {
+  // If only one number was passed in make it the edge and 0 the start.
+  if (arguments.length == 1) {
+    edge = start;
+    start = 0;
+  }
+
+  // Validate the edge and step numbers.
+  edge = edge || 0;
+  step = step || 1;
+
+  // Create the array of numbers, stopping befor the edge.
+  for (var ret = []; (edge - start) * step > 0; start += step) {
+    ret.push(start);
+  }
+  return ret;
+}
+
+function graphSubset(graph, _subset) {
+    var subset = new Set(_subset);
+    var nodes = [];
+    var subsetNums = new Map();
+    graph.nodes.forEach(function(node, index) {
+        if( subset.has(node) ) {
+            subsetNums.set(index, nodes.length);
+            nodes.push(node);
+        }
+    });
+    var edges = [];
+    graph.edges.forEach(function(edge){
+        if( subsetNums.has(edge.source) && subsetNums.has(edge.target) ) {
+            edges.push({
+                source: subsetNums.get(edge.source),
+                target: subsetNums.get(edge.target),
+                value: edge.value,
+            });
+        }
+    });
+
+    return {
+        nodes: nodes,
+        edges: edges,
+    };
+}
+
+
 var fn_small = require('./data/FarsNews_Small.json').data;
+_ = require('./lib/underscore.js');
 
-khoshgel = khoshgelify(fn_small);
+var data = khoshgelify(fn_small);
 
-tokenize(khoshgel);
+tokenize(data);
+var graph = keywordGraph(data);
 
-graph = createMatrix(khoshgel[0].tokens, 10);
-probs = randomWalk(graph.edges);
+var subset = graphSubset(graph, graph.nodes.slice(0, 100));
 
-probs.forEach(function(p, i) {
-    if( p > 0.0007 )
-        console.log(graph.nodes[i] + '  : ' + p);
-});
+writeGraphToFile(subset.nodes, subset.edges);
+
+
+// probs.forEach(function(p, i) {
+//     if( p > 0.0007 )
+//         console.log(graph.nodes[i] + '  : ' + p);
+// });
 
 // console.log('starting....');
-// graph = createMatrix(khoshgel, 10);
+// graph = createMatrix(data, 10);
 // console.log('made matrix....');
 // // console.log(graph);
 // // console.log(graph.nodes);
@@ -238,7 +369,7 @@ probs.forEach(function(p, i) {
 //     console.log('file was saved as data/keyword.json');
 // });
 
-// similiarity(khoshgel, khoshgel);
+// similiarity(data, data);
 
 /*
     change algorithm to find keywords on just a single news
