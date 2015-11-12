@@ -1,0 +1,15 @@
+{
+  "name": "bigdata_server",
+  "version": "0.0.1",
+  "description": "bigdata workgroup server Jelastic app",
+  "main": "server.js",
+  "dependencies": {
+    "ejs": "~1.0.0",
+    "static-resource": "~0.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node neo4j.js"
+  },
+  "author": "hishki"
+}
