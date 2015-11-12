@@ -40,6 +40,8 @@ exp.writeGraphToFile = function(nodes, edges) {
     });
 };
 
+exp.clone = function(a) { return JSON.parse(JSON.stringify(a)); };
+
 exp.range = function(start, edge, step) {
   // If only one number was passed in make it the edge and 0 the start.
   if (arguments.length == 1) {
