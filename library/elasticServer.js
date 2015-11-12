@@ -11,9 +11,6 @@ var queryOptions = {
     hostname: 'node49444-bigdata.jelastic.elastx.net',
     auth: 'admin:DVAzai94115',
     headers: {
-        // 'Host': 'node49444-bigdata.jelastic.elastx.net',
-        // 'Content-Length': '30',
-        // 'Authorization': 'Basic YWRtaW46RFZBemFpOTQxMTU=',
     },
 };
 
@@ -38,4 +35,34 @@ exp.query = function(query) {
     req.write(params);
 
     req.end();
+};
+
+exp.deleteAll = function() {
+    exp.query('MATCH (x) - [z] -> (y) DELETE z');
+    exp.query('MATCH (n) DELETE n');
+};
+
+exp.createNode = function(nodeType, properties) {
+    var type, prop;
+    if( typeof(nodeType) === 'undefined' )
+        type = '';
+    else
+        type = ':' + nodeType;
+
+    if( typeof(properties) === 'undefined' )
+        props = '';
+    else {
+        props = ' {';
+        var first = true;
+        for(var p in properties) {
+            if( !first )
+                props += ',';
+            props += p + ':"' + properties[p] + '"';
+            first = false;
+        }
+        props += '}';
+    }
+
+    exp.query('CREATE (n' + type + props + ')');
+
 };
